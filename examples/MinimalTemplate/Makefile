@@ -8,7 +8,7 @@ AVRDUDE_CONF		= /etc/avrdude.conf
 CPPFLAGS		+= -I/usr/avr/sys-root/include -D __STDC_LIMIT_MACROS
 CXXFLAGS_STD            = -std=c++11
 
-ARDUINO_SKETCHBOOK      = ./sketchbook
+ARDUINO_SKETCHBOOK      = ../sketchbook
 ARDUINO_LIBS		= Adafruit_GFX SPI EEPROM Wire
 
 BOARD_TAG               = mini
