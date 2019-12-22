@@ -13,7 +13,7 @@ ARDUINO_LIBS		= Adafruit_GFX SPI EEPROM Wire
 
 BOARD_TAG               = mini
 BOARD_SUB               = atmega328
-MONITOR_PORT		= /dev/ttyACM0
+MONITOR_PORT		= /dev/ttyUSB0
 
 include /usr/share/arduino/Arduino.mk
 
