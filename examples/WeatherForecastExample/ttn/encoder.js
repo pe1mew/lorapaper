@@ -1,6 +1,4 @@
 function Encoder(object, port) {
-  // Encode downlink messages sent as
-  // object to an array or buffer of bytes.
   var bytes = [];
 
   bytes[0] = object.temp || 0;
