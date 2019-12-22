@@ -29,24 +29,24 @@
 #include "PL_microEPD44.h"
 
 /******** GLOBAL VARIABLES ****************************************************************/
-sAPP    app;                  // Application variable
-sLoRaWAN  lora;               // See the lorapaper.h file for the settings 
-sTimeDate TimeDate;           // RTC time and date variables
-LORAMAC lorawan (&lora);      // Initialize the LoRaWAN stack.  
-CayenneLPP LPP(&(lora.TX));   // Initialize the Low Power Protocol functions
-PL_microEPD epd(EPD_CS, EPD_RST, EPD_BUSY);    //Initialize the EPD.
+sAPP        app;                            // Application variable
+sLoRaWAN    lora;                           // See the lorapaper.h file for the settings 
+sTimeDate   TimeDate;                       // RTC time and date variables
+LORAMAC     lorawan (&lora);                // Initialize the LoRaWAN stack.  
+CayenneLPP  LPP(&(lora.TX));                // Initialize the Low Power Protocol functions
+PL_microEPD epd(EPD_CS, EPD_RST, EPD_BUSY); //Initialize the EPD.
 
-volatile bool RTC_ALARM = false;      // Interrupt variable
-uint16_t v_scap, ndr, sync_max = 10;  // V_Supercap, counter of failed downloads & max_syncs
+volatile bool RTC_ALARM        = false;     // Interrupt variable
+uint16_t v_scap, ndr, sync_max = 10;        // V_Supercap, counter of failed downloads & max_syncs
 
 /********* INTERRUPTS *********************************************************************/
-ISR(INT1_vect) {                // Interrupt vector for the alarm of the MCP7940 Real Time 
-  RTC_ALARM = true;             // Clock. Do not use I2C functions or long delays
-}                               // here.
+ISR(INT1_vect) {                      // Interrupt vector for the alarm of the MCP7940 Real Time 
+  RTC_ALARM = true;                   // Clock. Do not use I2C functions or long delays
+}                                     // here.
 
-ISR(TIMER1_COMPA_vect) {        // Interrupt vector for Timer1 which is used to time the Join  
-  lora.timeslot++;              // and Receive windows for timeslot 1 and timelsot 2 Increment 
-}                               // the timeslot counter variable for timing the
+ISR(TIMER1_COMPA_vect) {              // Interrupt vector for Timer1 which is used to time the Join  
+  lora.timeslot++;                    // and Receive windows for timeslot 1 and timelsot 2 Increment 
+}                                     // the timeslot counter variable for timing the
 
 /********* MAIN ***************************************************************************/
 void setup(void) {  
@@ -87,73 +87,90 @@ void setup(void) {
 }
 
 void loop(){ 
-    if(RTC_ALARM == true){             // Catch the minute alarm from the RTC. 
-        RTC_ALARM = false;             // Clear the boolean.
+  if(RTC_ALARM == true) {             // Catch the minute alarm from the RTC. 
+      RTC_ALARM = false;              // Clear the boolean.
+      
+      mcp7940_reset_minute_alarm(app.LoRaWAN_message_interval);        
+      mcp7940_read_time_and_date(&TimeDate);    
         
-        mcp7940_reset_minute_alarm(app.LoRaWAN_message_interval);        
-        mcp7940_read_time_and_date(&TimeDate);    
-          
-        digitalWrite(SW_TFT, LOW);     // Turn ON voltage divider 
-        delay(1);                      // To stabilize analogRead
-        v_scap = analogRead(A7);       // Measure V_scap
-        digitalWrite(SW_TFT, HIGH);    // Turn OFF voltage divider 
- 
-        if (v_scap >= 320) {           // Proceed only if (Vscap > 4,2V)--> DEFAULT!
-        //if (v_scap >= 0) {           // Always proceed --> Use this for debugging!             
-            LPP.clearBuffer();         // Form a payload according to the LPP standard to 
-            LPP.addDigitalOutput(0x00, app.Counter);
-            LPP.addAnalogInput(0x00, v_scap*3.3/1024*200);
-            app.Counter += 1;          // Increase app.Counter
+      digitalWrite(SW_TFT, LOW);      // Turn ON voltage divider 
+      delay(1);                       // To stabilize analogRead
+      v_scap = analogRead(A7);        // Measure V_scap
+      digitalWrite(SW_TFT, HIGH);     // Turn OFF voltage divider 
 
-            SPI.begin();
-            SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
-            epd.begin(false);             // Turn ON EPD without refresh to save power
-            lorawan.init();               // Init the RFM95 module
+      if (v_scap >= 320) {            // Proceed only if (Vscap > 4,2V)--> DEFAULT!
+      //if (v_scap >= 0) {            // Always proceed --> Use this for debugging!             
+        LPP.clearBuffer();            // Form a payload according to the LPP standard to 
+        LPP.addDigitalOutput(0x00, app.Counter);
+        LPP.addAnalogInput(0x00, v_scap*3.3/1024*200);
+        app.Counter += 1;             // Increase app.Counter
 
-            if (app.Counter< sync_max) {  // Limit to 10 syncs to fullfill TTNs daily download limit
-                lora.RX.Data[6] = 25;     // Dummy value to check lateron if downlink data was received
-                lorawan.LORA_send_and_receive();
-            }
-                       
-            if (lora.RX.Data[6] == 25)    // Downlink data received?
-                ndr++;                    // if not increase nodatareceived (ndr) counter
-                
-             epd.printText("1Day Forecast ", 1, 2, 1);  // Following lines look a bit complex; due to 
-             epd.printText(String(lora.RX.Data[3]), 107, 2, 1);   // memory constraints we can only write 
-              epd.printText(":", 119, 2, 1);                      // smallfractions of the screen in one go
-              if (int(lora.RX.Data[4]) < 10) {                    // generally here we have some air for 
-                 epd.printText("0", 125, 2, 1);                   // improvement in the future
-                 epd.printText(String(lora.RX.Data[4]), 131, 2, 1);          
-              } else 
-                 epd.printText(String(lora.RX.Data[4]), 125, 2, 1);      
-              
-              epd.printText(String(lora.RX.Data[0]), 11, 16, 3); 
-              epd.printText("o", 53, 12, 2);
-              epd.printText("C", 65, 16, 3);
-              epd.drawBitmapLM(90, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
-              epd.printText(String(lora.RX.Data[1]), 11, 44, 3);  // icons; here it will always be the same 
-              epd.printText("%", 65, 44, 3);                      // independent of the weather forecast :-)
-              epd.printText(String(app.Counter), 124, 30, 1);
-              epd.fillRectLM(90, 40, 1, (int)lora.RX.Data[6], EPD_BLACK);   // Rain probability of the next 
-              epd.fillRectLM(92, 40, 1, (int)lora.RX.Data[7], EPD_BLACK);   // 12hrs... to be improved
-              epd.fillRectLM(94, 40, 1, (int)lora.RX.Data[8], EPD_BLACK);
-              epd.fillRectLM(96, 40, 1, (int)lora.RX.Data[9], EPD_BLACK);
-              epd.fillRectLM(98, 40, 1, (int)lora.RX.Data[10], EPD_BLACK);
-              epd.fillRectLM(100, 40, 1, (int)lora.RX.Data[11], EPD_BLACK);
-              epd.fillRectLM(102, 40, 1, (int)lora.RX.Data[12], EPD_BLACK);
-              epd.fillRectLM(104, 40, 1, (int)lora.RX.Data[13], EPD_BLACK);
-              epd.fillRectLM(106, 40, 1, (int)lora.RX.Data[14], EPD_BLACK);
-              epd.fillRectLM(108, 40, 1, (int)lora.RX.Data[15], EPD_BLACK);
-              epd.fillRectLM(110, 40, 1, (int)lora.RX.Data[16], EPD_BLACK);
-              epd.fillRectLM(112, 40, 1, (int)lora.RX.Data[17], EPD_BLACK);
-              epd.printText(String(ndr), 124, 40, 1);             // Plot how many downlinks were empty
-   
-             epd.update();                                        // Send the framebuffer and do the update
-             epd.end();                                           // To save power...
-             digitalWrite(RFM_NSS, LOW);                          // To save power...
-             SPI.endTransaction();                                // To save power...
-             SPI.end();                                           // To save power...
+        SPI.begin();
+        SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+        epd.begin(false);             // Turn ON EPD without refresh to save power
+        lorawan.init();               // Init the RFM95 module
+
+        if (app.Counter< sync_max) {  // Limit to 10 syncs to fullfill TTNs daily download limit
+          lora.RX.Data[6] = 25;       // Dummy value to check lateron if downlink data was received
+          lorawan.LORA_send_and_receive();
         }
-      } else
-        LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);      // To save power... 
+                    
+        if (lora.RX.Data[6] == 25) {  // Downlink data received?
+          ndr++;                      // if not increase nodatareceived (ndr) counter
+        }
+        
+        /* 
+         * Following lines look a bit complex; due to 
+         * memory constraints we can only write 
+         * smallfractions of the screen in one go
+         * generally here we have some air for 
+         * improvement in the future
+         */
+        epd.printText("1Day Forecast ", 1, 2, 1);           // Header line
+        
+        epd.printText(String(lora.RX.Data[3]), 107, 2, 1);  // Clock, hours
+        epd.printText(":", 119, 2, 1);                      // Clock, ":"
+        if (int(lora.RX.Data[4]) < 10) {                    // Clock, minutes
+            epd.printText("0", 125, 2, 1);
+            epd.printText(String(lora.RX.Data[4]), 131, 2, 1);
+        } else 
+            epd.printText(String(lora.RX.Data[4]), 125, 2, 1);
+          
+        epd.printText(String(lora.RX.Data[0]), 11, 16, 3);  // Temperature
+        epd.printText("o", 53, 12, 2);
+        epd.printText("C", 65, 16, 3);
+        
+        epd.drawBitmapLM(90, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
+                                                            // icons; here it will always be the same 
+                                                            // independent of the weather forecast :-)
+        
+        epd.printText(String(lora.RX.Data[1]), 11, 44, 3);  // Humidity
+        epd.printText("%", 65, 44, 3);                      
+        
+        epd.printText(String(app.Counter), 124, 30, 1);
+        
+        epd.fillRectLM(90, 40, 1, (int)lora.RX.Data[6], EPD_BLACK);   // Rain probability of the next 
+        epd.fillRectLM(92, 40, 1, (int)lora.RX.Data[7], EPD_BLACK);   // 12hrs... to be improved
+        epd.fillRectLM(94, 40, 1, (int)lora.RX.Data[8], EPD_BLACK);
+        epd.fillRectLM(96, 40, 1, (int)lora.RX.Data[9], EPD_BLACK);
+        epd.fillRectLM(98, 40, 1, (int)lora.RX.Data[10], EPD_BLACK);
+        epd.fillRectLM(100, 40, 1, (int)lora.RX.Data[11], EPD_BLACK);
+        epd.fillRectLM(102, 40, 1, (int)lora.RX.Data[12], EPD_BLACK);
+        epd.fillRectLM(104, 40, 1, (int)lora.RX.Data[13], EPD_BLACK);
+        epd.fillRectLM(106, 40, 1, (int)lora.RX.Data[14], EPD_BLACK);
+        epd.fillRectLM(108, 40, 1, (int)lora.RX.Data[15], EPD_BLACK);
+        epd.fillRectLM(110, 40, 1, (int)lora.RX.Data[16], EPD_BLACK);
+        epd.fillRectLM(112, 40, 1, (int)lora.RX.Data[17], EPD_BLACK);
+        
+        epd.printText(String(ndr), 124, 40, 1);             // Plot how many downlinks were empty
+
+        epd.update();                                       // Send the framebuffer and do the update
+        epd.end();                                          // To save power...
+        digitalWrite(RFM_NSS, LOW);                         // To save power...
+        SPI.endTransaction();                               // To save power...
+        SPI.end();                                          // To save power...
+      }
+  } else {
+    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);    // To save power... 
+  }
 }
