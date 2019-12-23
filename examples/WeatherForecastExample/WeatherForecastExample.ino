@@ -110,7 +110,7 @@ void loop(){
         epd.begin(false);             // Turn ON EPD without refresh to save power
         lorawan.init();               // Init the RFM95 module
 
-        if (app.Counter< sync_max) {  // Limit to 10 syncs to fullfill TTNs daily download limit
+        if (app.Counter < sync_max) {  // Limit to 10 syncs to fullfill TTNs daily download limit
           lora.RX.Data[6] = 25;       // Dummy value to check lateron if downlink data was received
           lorawan.LORA_send_and_receive();
         }
@@ -139,15 +139,13 @@ void loop(){
         epd.printText(String(lora.RX.Data[0]), 11, 16, 3);  // Temperature
         epd.printText("o", 53, 12, 2);
         epd.printText("C", 65, 16, 3);
-        
-        epd.drawBitmapLM(90, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
+
+        epd.printText(String(lora.RX.Data[1]), 11, 44, 3);  // Humidity
+        epd.printText("%", 65, 44, 3);
+
+        epd.drawBitmapLM(87, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
                                                             // icons; here it will always be the same 
                                                             // independent of the weather forecast :-)
-        
-        epd.printText(String(lora.RX.Data[1]), 11, 44, 3);  // Humidity
-        epd.printText("%", 65, 44, 3);                      
-        
-        epd.printText(String(app.Counter), 124, 30, 1);
         
         epd.fillRectLM(90, 40, 1, (int)lora.RX.Data[6], EPD_BLACK);   // Rain probability of the next 
         epd.fillRectLM(92, 40, 1, (int)lora.RX.Data[7], EPD_BLACK);   // 12hrs... to be improved
@@ -162,7 +160,9 @@ void loop(){
         epd.fillRectLM(110, 40, 1, (int)lora.RX.Data[16], EPD_BLACK);
         epd.fillRectLM(112, 40, 1, (int)lora.RX.Data[17], EPD_BLACK);
         
-        epd.printText(String(ndr), 124, 40, 1);             // Plot how many downlinks were empty
+        epd.printText("V " + String(v_scap*3.3/1023*4), 115, 20, 1); // Plot last known voltage
+        epd.printText("U " + String(app.Counter)      , 115, 30, 1); // Plot how many syncs have been tried
+        epd.printText("D " + String(ndr)              , 115, 40, 1); // Plot how many downlinks were empty
 
         epd.update();                                       // Send the framebuffer and do the update
         epd.end();                                          // To save power...
