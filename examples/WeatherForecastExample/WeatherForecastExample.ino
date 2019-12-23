@@ -162,7 +162,7 @@ void loop(){
         
         epd.printText("V " + String(v_scap*3.3/1023*4), 115, 20, 1); // Plot last known voltage
         epd.printText("U " + String(app.Counter)      , 115, 30, 1); // Plot how many syncs have been tried
-        epd.printText("D " + String(ndr)              , 115, 40, 1); // Plot how many downlinks were empty
+        epd.printText("D " + String(app.Counter - ndr), 115, 40, 1); // Plot how many downlinks were empty
 
         epd.update();                                       // Send the framebuffer and do the update
         epd.end();                                          // To save power...
