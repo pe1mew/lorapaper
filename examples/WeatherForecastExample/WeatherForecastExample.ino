@@ -111,11 +111,11 @@ void loop(){
         lorawan.init();               // Init the RFM95 module
 
         if (app.Counter < sync_max) { // Limit to 10 syncs to fullfill TTNs daily download limit
-          lora.RX.Data[11] = 0;       // Dummy value to check lateron if downlink data was received
+          lora.RX.Data[0] = 0;       // Dummy value to check lateron if downlink data was received
           lorawan.LORA_send_and_receive();
         }
                     
-        if (lora.RX.Data[6] == 0) {   // Downlink data received?
+        if (lora.RX.Data[0] == 0) {   // Downlink data received?
           ndr++;                      // if not increase nodatareceived (ndr) counter
           //epd.printText("ERROR", 115, 60, 1);
         }
@@ -130,28 +130,28 @@ void loop(){
         epd.printText("Current Weather ", 1, 2, 1);         // Header line
 
         String leadingHour = "";
-        if(lora.RX.Data[3] < 10) {
+        if(lora.RX.Data[4] < 10) {
           leadingHour = " ";
         }
         String leadingMinute = "";
-        if(lora.RX.Data[4] < 10) {
+        if(lora.RX.Data[5] < 10) {
           leadingMinute = "0";
         }
-        epd.printText(leadingHour + String(lora.RX.Data[3]) + ":" + leadingMinute + String(lora.RX.Data[4]), 110, 2, 1);
+        epd.printText(leadingHour + String(lora.RX.Data[4]) + ":" + leadingMinute + String(lora.RX.Data[5]), 110, 2, 1);
 
         String leadingTemp = "";
-        if(int8_t(lora.RX.Data[0]) > -1 && int8_t(lora.RX.Data[0]) < 10) {
+        if(int8_t(lora.RX.Data[1]) > -1 && int8_t(lora.RX.Data[1]) < 10) {
           leadingTemp = " ";
         }
-        epd.printText(leadingTemp + String(int8_t(lora.RX.Data[0])), 11, 16, 3);  // Temperature
+        epd.printText(leadingTemp + String(int8_t(lora.RX.Data[1])), 11, 16, 3);  // Temperature
         epd.printText("o", 53, 12, 2);
         epd.printText("C", 65, 16, 3);
 
         String leadingHumi = "";
-        if(int8_t(lora.RX.Data[1]) < 10) {
+        if(int8_t(lora.RX.Data[2]) < 10) {
           leadingHumi = " ";
         }
-        epd.printText(leadingHumi + String(uint8_t(lora.RX.Data[1])), 11, 44, 3);  // Humidity
+        epd.printText(leadingHumi + String(uint8_t(lora.RX.Data[2])), 11, 44, 3);  // Humidity
         epd.printText("%", 65, 44, 3);
 
         epd.drawBitmapLM(87, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
@@ -163,11 +163,11 @@ void loop(){
         epd.fillRectLM(97 , 41, 4, 1, EPD_BLACK);
         epd.fillRectLM(102, 41, 4, 1, EPD_BLACK);
         epd.fillRectLM(107, 41, 4, 1, EPD_BLACK);
-        uint8_t r1 = uint8_t(lora.RX.Data[6]) * 2;
-        uint8_t r2 = uint8_t(lora.RX.Data[7]) * 2;
-        uint8_t r3 = uint8_t(lora.RX.Data[8]) * 2;
-        uint8_t r4 = uint8_t(lora.RX.Data[9]) * 2;
-        uint8_t r5 = uint8_t(lora.RX.Data[10]) * 2;
+        uint8_t r1 = uint8_t(lora.RX.Data[7])  * 2;
+        uint8_t r2 = uint8_t(lora.RX.Data[8])  * 2;
+        uint8_t r3 = uint8_t(lora.RX.Data[9])  * 2;
+        uint8_t r4 = uint8_t(lora.RX.Data[10]) * 2;
+        uint8_t r5 = uint8_t(lora.RX.Data[11]) * 2;
         if(r1 > 20)
           r1 = 20;
         if(r2 > 20)
