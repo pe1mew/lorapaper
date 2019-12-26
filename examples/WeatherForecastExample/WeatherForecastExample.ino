@@ -110,13 +110,14 @@ void loop(){
         epd.begin(false);             // Turn ON EPD without refresh to save power
         lorawan.init();               // Init the RFM95 module
 
-        if (app.Counter < sync_max) {  // Limit to 10 syncs to fullfill TTNs daily download limit
-          lora.RX.Data[6] = 25;       // Dummy value to check lateron if downlink data was received
+        if (app.Counter < sync_max) { // Limit to 10 syncs to fullfill TTNs daily download limit
+          lora.RX.Data[11] = 0;       // Dummy value to check lateron if downlink data was received
           lorawan.LORA_send_and_receive();
         }
                     
-        if (lora.RX.Data[6] == 25) {  // Downlink data received?
+        if (lora.RX.Data[6] == 0) {   // Downlink data received?
           ndr++;                      // if not increase nodatareceived (ndr) counter
+          //epd.printText("ERROR", 115, 60, 1);
         }
         
         /* 
@@ -156,6 +157,32 @@ void loop(){
         epd.drawBitmapLM(87, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
                                                             // icons; here it will always be the same 
                                                             // independent of the weather forecast :-)
+
+        epd.fillRectLM(87 , 41, 4, 1, EPD_BLACK);
+        epd.fillRectLM(92 , 41, 4, 1, EPD_BLACK);
+        epd.fillRectLM(97 , 41, 4, 1, EPD_BLACK);
+        epd.fillRectLM(102, 41, 4, 1, EPD_BLACK);
+        epd.fillRectLM(107, 41, 4, 1, EPD_BLACK);
+        uint8_t r1 = uint8_t(lora.RX.Data[6]) * 2;
+        uint8_t r2 = uint8_t(lora.RX.Data[7]) * 2;
+        uint8_t r3 = uint8_t(lora.RX.Data[8]) * 2;
+        uint8_t r4 = uint8_t(lora.RX.Data[9]) * 2;
+        uint8_t r5 = uint8_t(lora.RX.Data[10]) * 2;
+        if(r1 > 20)
+          r1 = 20;
+        if(r2 > 20)
+          r2 = 20;
+        if(r3 > 20)
+          r3 = 20;
+        if(r4 > 20)
+          r4 = 20;
+        if(r5 > 20)
+          r5 = 20;
+        epd.fillRectLM(87 , 39, 4, r1, EPD_BLACK);
+        epd.fillRectLM(92 , 39, 4, r2, EPD_BLACK);
+        epd.fillRectLM(97 , 39, 4, r3, EPD_BLACK);
+        epd.fillRectLM(102, 39, 4, r4, EPD_BLACK);
+        epd.fillRectLM(107, 39, 4, r5, EPD_BLACK);
         
         /*
         epd.fillRectLM(90, 40, 1, (int)lora.RX.Data[6], EPD_BLACK);   // Rain probability of the next 
