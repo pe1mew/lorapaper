@@ -126,27 +126,38 @@ void loop(){
          * generally here we have some air for 
          * improvement in the future
          */
-        epd.printText("1Day Forecast ", 1, 2, 1);           // Header line
-        
-        epd.printText(String(lora.RX.Data[3]), 107, 2, 1);  // Clock, hours
-        epd.printText(":", 119, 2, 1);                      // Clock, ":"
-        if (int(lora.RX.Data[4]) < 10) {                    // Clock, minutes
-            epd.printText("0", 125, 2, 1);
-            epd.printText(String(lora.RX.Data[4]), 131, 2, 1);
-        } else 
-            epd.printText(String(lora.RX.Data[4]), 125, 2, 1);
-          
-        epd.printText(String(lora.RX.Data[0]), 11, 16, 3);  // Temperature
+        epd.printText("Current Weather ", 1, 2, 1);         // Header line
+
+        String leadingHour = "";
+        if(lora.RX.Data[3] < 10) {
+          leadingHour = " ";
+        }
+        String leadingMinute = "";
+        if(lora.RX.Data[4] < 10) {
+          leadingMinute = "0";
+        }
+        epd.printText(leadingHour + String(lora.RX.Data[3]) + ":" + leadingMinute + String(lora.RX.Data[4]), 110, 2, 1);
+
+        String leadingTemp = "";
+        if(int8_t(lora.RX.Data[0]) > -1 && int8_t(lora.RX.Data[0]) < 10) {
+          leadingTemp = " ";
+        }
+        epd.printText(leadingTemp + String(int8_t(lora.RX.Data[0])), 11, 16, 3);  // Temperature
         epd.printText("o", 53, 12, 2);
         epd.printText("C", 65, 16, 3);
 
-        epd.printText(String(lora.RX.Data[1]), 11, 44, 3);  // Humidity
+        String leadingHumi = "";
+        if(int8_t(lora.RX.Data[1]) < 10) {
+          leadingHumi = " ";
+        }
+        epd.printText(leadingHumi + String(uint8_t(lora.RX.Data[1])), 11, 44, 3);  // Humidity
         epd.printText("%", 65, 44, 3);
 
         epd.drawBitmapLM(87, 15, wIcon_sunny, 24, 24);      // Just to demonstrate how to write little
                                                             // icons; here it will always be the same 
                                                             // independent of the weather forecast :-)
         
+        /*
         epd.fillRectLM(90, 40, 1, (int)lora.RX.Data[6], EPD_BLACK);   // Rain probability of the next 
         epd.fillRectLM(92, 40, 1, (int)lora.RX.Data[7], EPD_BLACK);   // 12hrs... to be improved
         epd.fillRectLM(94, 40, 1, (int)lora.RX.Data[8], EPD_BLACK);
@@ -159,6 +170,7 @@ void loop(){
         epd.fillRectLM(108, 40, 1, (int)lora.RX.Data[15], EPD_BLACK);
         epd.fillRectLM(110, 40, 1, (int)lora.RX.Data[16], EPD_BLACK);
         epd.fillRectLM(112, 40, 1, (int)lora.RX.Data[17], EPD_BLACK);
+        */
         
         epd.printText("V " + String(v_scap*3.3/1023*4), 115, 20, 1); // Plot last known voltage
         epd.printText("U " + String(app.Counter)      , 115, 30, 1); // Plot how many syncs have been tried
